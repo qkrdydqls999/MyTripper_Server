@@ -1,23 +1,17 @@
 // 필요한 모듈 가져오기
-import express from "express";
-import { createClient } from "@supabase/supabase-js";
-import cors from "cors";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import path from "path";
-import fetch from "node-fetch";
-import { config } from "dotenv";
-import { fileURLToPath } from "url"; // ✅ fileURLToPath 함수 import
-
-const __filename = fileURLToPath(import.meta.url); // ✅ __filename 생성
-const __dirname = path.dirname(__filename); // ✅ __dirname 생성
+const express = require("express");
+const { createClient } = require("@supabase/supabase-js");
+const cors = require("cors");
+const bcrypt = require("bcrypt"); // 비밀번호 해싱을 위한 bcrypt 라이브러리
+const jwt = require("jsonwebtoken"); // JWT 라이브러리 추가
+const path = require("path"); //--
 
 // Express 애플리케이션 생성
 const app = express();
 const port = 3000; // 서버가 실행될 포트 번호
 
 // Supabase 클라이언트 설정
-config({ path: "./.env" }); // dotenv 설정 (ES Module 방식)
+require("dotenv").config({ path: "./.env" }); // ✅ .env 파일 경로 명시적으로 설정
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 // ⚠️ 실제 서비스에서는 API 키를 .env 파일에 저장하세요!
@@ -51,94 +45,6 @@ app.get("/api/keys", (req, res) => {
   });
 });
 //-----------------------------------------------------------
-
-// 🟢 Gemini API 호출 엔드포인트 추가 (Main03)
-app.get("/call-gemini", async (req, res) => {
-  console.log("[/call-gemini] 엔드포인트 호출 시작"); // ✅ 로그 추가: 엔드포인트 호출 시작
-  const prompt = req.query.prompt;
-  const apiKey = process.env.GEMINI_API_KEY_YB;
-
-  console.log("[/call-gemini] prompt:", prompt); // ✅ 로그 추가: prompt 값
-  console.log("[/call-gemini] apiKey:", apiKey); // ✅ 로그 추가: apiKey 값
-
-  if (!prompt) {
-    console.log("[/call-gemini] 오류: Prompt가 제공되지 않았습니다."); // ✅ 로그 추가: Prompt 미제공 오류
-    return res.status(400).json({ error: "Prompt가 제공되지 않았습니다." });
-  }
-  if (!apiKey) {
-    console.log(
-      "[/call-gemini] 오류: Gemini API 키가 서버에 설정되지 않았습니다."
-    ); // ✅ 로그 추가: API 키 미설정 오류
-    return res
-      .status(500)
-      .json({ error: "Gemini API 키가 서버에 설정되지 않았습니다." });
-  }
-
-  const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
-  console.log("[/call-gemini] geminiApiUrl:", geminiApiUrl); // ✅ 로그 추가: API 요청 URL
-
-  try {
-    console.log("[/call-gemini] fetch API 호출 시작"); // ✅ 로그 추가: fetch API 호출 시작
-    const response = await fetch(geminiApiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }],
-          },
-        ],
-      }),
-    });
-    console.log("[/call-gemini] fetch API 호출 완료"); // ✅ 로그 추가: fetch API 호출 완료
-    console.log("[/call-gemini] response:", response); // ✅ 로그 추가: API 응답 객체
-
-    if (!response.ok) {
-      console.log(
-        `[/call-gemini] 오류: Gemini API 요청 실패 - 상태 코드: ${response.status}, 상태 텍스트: ${response.statusText}`
-      ); // ✅ 로그 추가: API 요청 실패
-      throw new Error(
-        `Gemini API 요청 실패: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const data = await response.json();
-    console.log("[/call-gemini] response.json() 완료"); // ✅ 로그 추가: response.json() 완료
-    console.log("[/call-gemini] data:", data); // ✅ 로그 추가: API 응답 데이터
-
-    if (
-      data.candidates &&
-      data.candidates.length > 0 &&
-      data.candidates[0].content &&
-      data.candidates[0].content.parts &&
-      data.candidates[0].content.parts.length > 0
-    ) {
-      console.log(
-        "[/call-gemini] Gemini API 응답 성공 - AI 응답 텍스트 추출 완료"
-      ); // ✅ 로그 추가: AI 응답 텍스트 추출 성공
-      res.json({ result: data.candidates[0].content.parts[0].text });
-    } else {
-      console.log(
-        "[/call-gemini] 오류: Gemini API 응답 형식이 올바르지 않습니다.",
-        data
-      ); // ✅ 로그 추가: 응답 형식 오류
-      res.status(500).json({
-        error: "Gemini API 응답 형식이 올바르지 않습니다.",
-        details: data,
-      });
-    }
-  } catch (error) {
-    console.error("[/call-gemini] Gemini API 호출 오류:", error); // 기존 오류 로그 유지
-    res.status(500).json({
-      error: "Gemini API 호출 중 오류 발생",
-      details: error.message,
-    });
-  } finally {
-    console.log("[/call-gemini] 엔드포인트 호출 종료"); // ✅ 로그 추가: 엔드포인트 호출 종료
-  }
-});
 
 // 🟢 회원가입 API 엔드포인트
 app.post("/signup", async (req, res) => {
@@ -246,7 +152,7 @@ app.post("/reset-password-mbti", async (req, res) => {
 app.post("/set-new-password", async (req, res) => {
   const { user_id, newPassword } = req.body; // 요청에서 사용자 아이디와 새 비밀번호 추출
 
-  if (!user_id || newPassword) {
+  if (!user_id || !newPassword) {
     return res
       .status(400)
       .json({ message: "아이디와 새 비밀번호를 모두 입력해주세요." });
@@ -327,6 +233,49 @@ app.put("/myinfo/modifiy", async (req, res) => {
   }
 });
 
+// 마이페이지 내 글 조회
+app.get("/mypost", async (req, res) => {
+  try {
+    const user_id = req.query.id;
+    const pagelimit = 5;
+    let pageNum = parseInt(req.query.pageNum) || 1; // pageNum이 유효한 숫자인지 확인하고, 아니면 1로 설정
+    if (pageNum < 1) pageNum = 1; // pageNum이 1보다 작을 수 없도록 처리
+
+    const startPageNum = (pageNum - 1) * pagelimit;
+    const endPageNum = startPageNum + pagelimit - 1;
+
+    // 데이터 쿼리 (페이징 처리)
+    const { data, error: dataError } = await supabase
+      .from("travelplan")
+      .select("*")
+      .eq("user_id", user_id)
+      .order("serial_number", { ascending: false })
+      .range(startPageNum, endPageNum);
+
+    if (dataError) {
+      return res.status(500).send({ error: dataError.message }); // 데이터 쿼리 에러 처리
+    }
+
+    // user_id에 해당하는 총 데이터 개수를 가져오는 쿼리 (실제 데이터를 가져오지 않음)
+    const { count, error: countError } = await supabase
+      .from("travelplan")
+      .select("*", { count: "exact" }) // 총 개수만 계산
+      .eq("user_id", user_id);
+    if (countError) {
+      return res.status(500).send({ error: countError.message }); // 총 개수 쿼리 에러 처리
+    }
+
+    // 데이터와 총 개수를 클라이언트로 전송
+    res.send({
+      data,
+      totalCount: count, // 일치하는 데이터의 총 개수 포함
+    });
+  } catch (error) {
+    // 예상치 못한 오류를 처리
+    res.status(500).send({ error: "예기치 않은 오류가 발생했습니다." });
+  }
+});
+
 // 후기 게시판 라우트: /api/reviews
 app.get("/api/reviews", async (req, res) => {
   try {
@@ -336,7 +285,7 @@ app.get("/api/reviews", async (req, res) => {
     const start = (page - 1) * limit;
     const end = start + limit - 1;
 
-    // DB 테이블명 "travelplan" (실제로 존재하는지 확인!)
+    // DB 테이블명 "travelplan"
     let query = supabase
       .from("travelplan")
       .select(
@@ -348,16 +297,24 @@ app.get("/api/reviews", async (req, res) => {
       .order("serial_number", { ascending: false })
       .range(start, end);
 
-    const { mbti, search } = req.query;
+    const { mbti, search, withReview } = req.query;
+
+    // MBTI 필터
     if (mbti && mbti !== "MBTI별 게시글") {
       const mbtiArr = mbti.split(",").map((x) => x.trim().toUpperCase());
       query = query.in("plan_mbti", mbtiArr);
     }
 
+    // 검색어 필터
     if (search) {
       query = query.or(
         `sub_title.ilike.%${search}%,content_text.ilike.%${search}%`
       );
+    }
+
+    // 후기 필터링
+    if (withReview === "true") {
+      query = query.not("review", "is", null);
     }
 
     const { data, count, error } = await query;
@@ -370,14 +327,35 @@ app.get("/api/reviews", async (req, res) => {
   }
 });
 
+// 게시글 댓글 조회
+app.get("/comment", async (req, res) => {
+  const serial_number = req.query.id;
+  try {
+    // 데이터 쿼리 (페이징 처리)
+    const { data, error: dataError } = await supabase
+      .from("comment")
+      .select("*")
+      .eq("c_s_num", serial_number)
+      .order("comment_day", { ascending: false });
+
+    if (dataError) {
+      return res.status(500).send({ error: dataError.message }); // 데이터 쿼리 에러 처리
+    }
+
+    res.json(data);
+  } catch (error) {
+    return res.status(500).send({ error: dataError.message }); // 데이터 쿼리 에러 처리
+  }
+});
+
 // 정적 파일 서빙
 app.use(
   "/review",
-  express.static(path.join(__dirname, "..", "MyTripper", "review-hsu")) // ✅ 수정: __dirname 사용 (ES Module 대체)
+  express.static(path.join(__dirname, "..", "MyTripper", "review-hsu"))
 );
 app.use(
   "/common",
-  express.static(path.join(__dirname, "..", "MyTripper", "_common")) // ✅ 수정: __dirname 사용 (ES Module 대체)
+  express.static(path.join(__dirname, "..", "MyTripper", "_common"))
 );
 
 // 🟢 서버 실행
